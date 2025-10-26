@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Firebase Database Seeder - Hotel Booking System</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 800px;
+            width: 100%;
+        }
+        h1 { color: #333; margin-bottom: 10px; font-size: 2.5rem; }
+        .subtitle { color: #666; margin-bottom: 30px; font-size: 1.1rem; }
+        .seed-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.2rem;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+            margin: 10px;
+        }
+        .seed-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 30px rgba(102, 126, 234, 0.4);
+        }
+        .seed-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .status {
+            margin-top: 30px;
+            padding: 20px;
+            border-radius: 10px;
+            display: none;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status.loading {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .progress {
+            margin-top: 20px;
+            background: #f0f0f0;
+            border-radius: 10px;
+            overflow: hidden;
+            height: 10px;
+            display: none;
+        }
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        .collections-list {
+            margin-top: 20px;
+            text-align: left;
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            display: none;
+        }
+        .collection-item {
+            padding: 8px 0;
+            border-bottom: 1px solid #dee2e6;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .collection-item:last-child { border-bottom: none; }
+        .collection-status {
+            font-size: 0.9rem;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+        .collection-status.pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .collection-status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+        .collection-status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌱 Database Seeder</h1>
+        <p class="subtitle">Hotel Booking System - Complete Data Population</p>
+        
+        <div style="background: #e3f2fd; padding: 20px; border-radius: 10px; margin-bottom: 20px; text-align: left;">
+            <h3 style="color: #1976d2; margin-bottom: 10px;">📊 Comprehensive Data Seeding</h3>
+            <p style="color: #333; line-height: 1.6;">This seeder will populate your database with:</p>
+            <ul style="color: #333; line-height: 1.6; margin-top: 10px;">
+                <li>✅ <strong>Users:</strong> 10 customers + 3 admin accounts</li>
+                <li>✅ <strong>Rooms:</strong> 25 rooms across 5 different types</li>
+                <li>✅ <strong>Bookings:</strong> 50 realistic booking records</li>
+                <li>✅ <strong>Reviews:</strong> 75 customer reviews with ratings</li>
+                <li>✅ <strong>Payments:</strong> Payment records for all bookings</li>
+                <li>✅ <strong>Extras:</strong> 15 additional services</li>
+                <li>✅ <strong>Promo Codes:</strong> 8 promotional campaigns</li>
+                <li>✅ <strong>Analytics:</strong> 30 days of business metrics</li>
+                <li>✅ <strong>Notifications:</strong> Sample notification data</li>
+                <li>✅ <strong>Settings:</strong> Complete system configuration</li>
+            </ul>
+        </div>
+        
+        <button id="seedAll" class="seed-btn">🌱 Seed Complete Database</button>
+        <button id="clearAll" class="seed-btn" style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);">🗑️ Clear All Data</button>
+        
+        <div id="status" class="status"></div>
+        <div id="progress" class="progress">
+            <div id="progressBar" class="progress-bar"></div>
+        </div>
+        
+        <div id="collectionsList" class="collections-list">
+            <h3>Seeding Progress:</h3>
+            <div id="collectionsItems"></div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getFirestore, collection, addDoc, setDoc, doc, serverTimestamp, deleteDoc, getDocs, writeBatch } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+        import { getAuth, createUserWithEmailAndPassword, updateProfile } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyArsLiVQo7C_eMKrUnAikiPvaLLD12AUMw",
+            authDomain: "hotelmanagementsystem-85d35.firebaseapp.com",
+            projectId: "hotelmanagementsystem-85d35",
+            storageBucket: "hotelmanagementsystem-85d35.firebasestorage.app",
+            messagingSenderId: "429417604265",
+            appId: "1:429417604265:web:7c68e30d23e16ab872f5b8",
+            measurementId: "G-3N0ZGCZHGB"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        // DOM elements
+        const seedBtn = document.getElementById('seedAll');
+        const clearBtn = document.getElementById('clearAll');
+        const statusDiv = document.getElementById('status');
+        const progressDiv = document.getElementById('progress');
+        const progressBar = document.getElementById('progressBar');
+        const collectionsList = document.getElementById('collectionsList');
+        const collectionsItems = document.getElementById('collectionsItems');
+
+        // Utility functions
+        function showStatus(message, type) {
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${type}`;
+            statusDiv.style.display = 'block';
+        }
+
+        function updateProgress(current, total) {
+            const percentage = (current / total) * 100;
+            progressBar.style.width = `${percentage}%`;
+            progressDiv.style.display = 'block';
+        }
+
+        function updateCollectionStatus(collectionName, status) {
+            const item = document.getElementById(`collection-${collectionName}`);
+            if (item) {
+                const statusSpan = item.querySelector('.collection-status');
+                statusSpan.textContent = status === 'success' ? '✅ Seeded' : status === 'error' ? '❌ Error' : '⏳ Seeding...';
+                statusSpan.className = `collection-status ${status}`;
+            }
+        }
+
+        function createCollectionsListUI(collections) {
+            collectionsItems.innerHTML = collections.map(name => `
+                <div id="collection-${name}" class="collection-item">
+                    <span>${name}</span>
+                    <span class="collection-status pending">⏳ Pending</span>
+                </div>
+            `).join('');
+            collectionsList.style.display = 'block';
+        }
+
+        // Generate random data helpers
+        function randomDate(start, end) {
+            return new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
+        }
+
+        function randomChoice(array) {
+            return array[Math.floor(Math.random() * array.length)];
+        }
+
+        function randomNumber(min, max) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+        // Sample data arrays
+        const firstNames = ['John', 'Jane', 'Michael', 'Sarah', 'David', 'Emma', 'James', 'Lisa', 'Robert', 'Maria', 'William', 'Jennifer', 'Richard', 'Patricia', 'Charles', 'Linda', 'Thomas', 'Barbara', 'Christopher', 'Susan'];
+        const lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez', 'Hernandez', 'Lopez', 'Gonzalez', 'Wilson', 'Anderson', 'Thomas', 'Taylor', 'Moore', 'Jackson', 'Martin'];
+        const roomTypes = ['Standard', 'Deluxe', 'Suite', 'Presidential', 'Family'];
+        const roomFeatures = ['WiFi', 'TV', 'Mini Bar', 'Air Conditioning', 'Balcony', 'Ocean View', 'City View', 'Jacuzzi', 'Kitchenette', 'Safe'];
+        const paymentMethods = ['Credit Card', 'Debit Card', 'PayPal', 'Bank Transfer'];
+        const bookingStatuses = ['confirmed', 'pending', 'cancelled', 'completed'];
+        const extraServices = ['Spa Treatment', 'Room Service', 'Laundry', 'Airport Transfer', 'Car Rental', 'Tour Guide', 'Breakfast', 'Dinner', 'Gym Access', 'Pool Access'];
+
+        // Generate seed data functions
+        function generateUsers() {
+            const users = [];
+            
+            // Generate regular users
+            for (let i = 1; i <= 10; i++) {
+                users.push({
+                    id: `user_${i}`,
+                    firstName: randomChoice(firstNames),
+                    lastName: randomChoice(lastNames),
+                    email: `user${i}@example.com`,
+                    password: 'password123', // Default password for all users
+                    phone: `+1${randomNumber(1000000000, 9999999999)}`,
+                    role: 'customer',
+                    createdAt: serverTimestamp(),
+                    isActive: true,
+                    preferences: {
+                        newsletter: Math.random() > 0.5,
+                        notifications: Math.random() > 0.3
+                    }
+                });
+            }
+            
+            // Generate admin users
+            users.push({
+                id: 'admin_1',
+                firstName: 'Admin',
+                lastName: 'User',
+                email: 'admin@hotel.com',
+                password: 'admin123',
+                phone: '+1234567890',
+                role: 'admin',
+                createdAt: serverTimestamp(),
+                isActive: true
+            });
+            
+            users.push({
+                id: 'manager_1',
+                firstName: 'Manager',
+                lastName: 'User',
+                email: 'manager@hotel.com',
+                password: 'manager123',
+                phone: '+1234567891',
+                role: 'manager',
+                createdAt: serverTimestamp(),
+                isActive: true
+            });
+            
+            users.push({
+                id: 'staff_1',
+                firstName: 'Staff',
+                lastName: 'User',
+                email: 'staff@hotel.com',
+                password: 'staff123',
+                phone: '+1234567892',
+                role: 'staff',
+                createdAt: serverTimestamp(),
+                isActive: true
+            });
+            
+            return users;
+        }
+
+        function generateRooms() {
+            const rooms = [];
+            let roomNumber = 101;
+            
+            for (let i = 1; i <= 25; i++) {
+                const type = randomChoice(roomTypes);
+                const basePrice = type === 'Standard' ? 100 : type === 'Deluxe' ? 150 : type === 'Suite' ? 250 : type === 'Presidential' ? 500 : 200;
+                
+                rooms.push({
+                    id: `room_${i}`,
+                    roomNumber: roomNumber.toString(),
+                    type: type,
+                    capacity: randomNumber(1, 4),
+                    pricePerNight: basePrice + randomNumber(-20, 50),
+                    features: randomChoice(roomFeatures.slice(0, randomNumber(3, 6))),
+                    isAvailable: Math.random() > 0.2,
+                    floor: Math.floor(roomNumber / 100),
+                    description: `Beautiful ${type.toLowerCase()} room with modern amenities`,
+                    images: [`room_${i}_1.jpg`, `room_${i}_2.jpg`],
+                    createdAt: serverTimestamp()
+                });
+                
+                roomNumber++;
+                if (roomNumber % 100 > 20) {
+                    roomNumber = (Math.floor(roomNumber / 100) + 1) * 100 + 1;
+                }
+            }
+            
+            return rooms;
+        }
+
+        function generateBookings() {
+            const bookings = [];
+            const startDate = new Date();
+            startDate.setDate(startDate.getDate() - 30);
+            const endDate = new Date();
+            endDate.setDate(endDate.getDate() + 60);
+            
+            for (let i = 1; i <= 50; i++) {
+                const checkIn = randomDate(startDate, endDate);
+                const checkOut = new Date(checkIn);
+                checkOut.setDate(checkOut.getDate() + randomNumber(1, 7));
+                
+                bookings.push({
+                    id: `booking_${i}`,
+                    userId: `user_${randomNumber(1, 10)}`,
+                    roomId: `room_${randomNumber(1, 25)}`,
+                    checkInDate: checkIn,
+                    checkOutDate: checkOut,
+                    guests: randomNumber(1, 4),
+                    totalAmount: randomNumber(200, 1500),
+                    status: randomChoice(bookingStatuses),
+                    paymentStatus: Math.random() > 0.1 ? 'paid' : 'pending',
+                    specialRequests: Math.random() > 0.7 ? 'Late check-in requested' : '',
+                    createdAt: serverTimestamp(),
+                    updatedAt: serverTimestamp()
+                });
+            }
+            
+            return bookings;
+        }
+
+        function generateReviews() {
+            const reviews = [];
+            const reviewTexts = [
+                'Excellent service and beautiful room!',
+                'Great location and friendly staff.',
+                'Clean rooms and comfortable beds.',
+                'Amazing view from the balcony.',
+                'Perfect for a weekend getaway.',
+                'Outstanding customer service.',
+                'Room was spacious and well-maintained.',
+                'Highly recommend this hotel!'
+            ];
+            
+            for (let i = 1; i <= 75; i++) {
+                reviews.push({
+                    id: `review_${i}`,
+                    bookingId: `booking_${randomNumber(1, 50)}`,
+                    userId: `user_${randomNumber(1, 10)}`,
+                    roomId: `room_${randomNumber(1, 25)}`,
+                    rating: randomNumber(3, 5),
+                    comment: randomChoice(reviewTexts),
+                    createdAt: serverTimestamp(),
+                    isVerified: Math.random() > 0.1
+                });
+            }
+            
+            return reviews;
+        }
+
+        function generatePayments() {
+            const payments = [];
+            
+            for (let i = 1; i <= 50; i++) {
+                payments.push({
+                    id: `payment_${i}`,
+                    bookingId: `booking_${i}`,
+                    amount: randomNumber(200, 1500),
+                    method: randomChoice(paymentMethods),
+                    status: Math.random() > 0.05 ? 'completed' : 'failed',
+                    transactionId: `txn_${randomNumber(100000, 999999)}`,
+                    createdAt: serverTimestamp(),
+                    processedAt: serverTimestamp()
+                });
+            }
+            
+            return payments;
+        }
+
+        function generateExtras() {
+            const extras = [];
+            
+            for (let i = 1; i <= 15; i++) {
+                const service = randomChoice(extraServices);
+                extras.push({
+                    id: `extra_${i}`,
+                    name: service,
+                    description: `Professional ${service.toLowerCase()} service`,
+                    price: randomNumber(25, 200),
+                    category: service.includes('Room') ? 'room' : service.includes('Spa') ? 'wellness' : 'general',
+                    isActive: Math.random() > 0.1,
+                    createdAt: serverTimestamp()
+                });
+            }
+            
+            return extras;
+        }
+
+        function generatePromoCodes() {
+            const promoCodes = [];
+            const codes = ['WELCOME10', 'SUMMER20', 'WEEKEND15', 'FAMILY25', 'LUXURY30', 'EARLY20', 'STAY3GET1', 'BUSINESS15'];
+            
+            codes.forEach((code, index) => {
+                promoCodes.push({
+                    id: `promo_${index + 1}`,
+                    code: code,
+                    description: `${code} - Special discount offer`,
+                    discountType: Math.random() > 0.5 ? 'percentage' : 'fixed',
+                    discountValue: randomNumber(10, 30),
+                    minAmount: randomNumber(100, 300),
+                    maxUses: randomNumber(50, 200),
+                    currentUses: randomNumber(0, 50),
+                    startDate: new Date(),
+                    endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+                    isActive: Math.random() > 0.2,
+                    createdAt: serverTimestamp()
+                });
+            });
+            
+            return promoCodes;
+        }
+
+        function generateAnalytics() {
+            const analytics = [];
+            
+            for (let i = 0; i < 30; i++) {
+                const date = new Date();
+                date.setDate(date.getDate() - i);
+                
+                analytics.push({
+                    id: `analytics_${i}`,
+                    date: date,
+                    totalBookings: randomNumber(5, 25),
+                    totalRevenue: randomNumber(1000, 8000),
+                    occupancyRate: randomNumber(60, 95),
+                    averageRating: (Math.random() * 2 + 3).toFixed(1),
+                    newCustomers: randomNumber(2, 10),
+                    createdAt: serverTimestamp()
+                });
+            }
+            
+            return analytics;
+        }
+
+        function generateNotifications() {
+            const notifications = [];
+            const types = ['booking', 'payment', 'review', 'system'];
+            const messages = [
+                'New booking received',
+                'Payment processed successfully',
+                'New review submitted',
+                'System maintenance scheduled',
+                'Room cleaning completed',
+                'Guest checked in',
+                'Guest checked out'
+            ];
+            
+            for (let i = 1; i <= 20; i++) {
+                notifications.push({
+                    id: `notification_${i}`,
+                    type: randomChoice(types),
+                    title: randomChoice(messages),
+                    message: `${randomChoice(messages)} - Additional details here`,
+                    userId: Math.random() > 0.5 ? `user_${randomNumber(1, 10)}` : null,
+                    isRead: Math.random() > 0.4,
+                    createdAt: serverTimestamp()
+                });
+            }
+            
+            return notifications;
+        }
+
+        function generateSettings() {
+            return [{
+                id: 'hotel_settings',
+                hotelName: 'Grand Palace Hotel',
+                address: '123 Luxury Avenue, City Center',
+                phone: '+1-555-0123',
+                email: 'info@grandpalace.com',
+                checkInTime: '15:00',
+                checkOutTime: '11:00',
+                currency: 'USD',
+                timezone: 'America/New_York',
+                taxRate: 0.12,
+                cancellationPolicy: '24 hours before check-in',
+                policies: {
+                    pets: false,
+                    smoking: false,
+                    parties: false
+                },
+                amenities: ['WiFi', 'Pool', 'Gym', 'Spa', 'Restaurant', 'Bar', 'Parking'],
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp()
+            }];
+        }
+
+        // Main seeding function
+        async function seedDatabase() {
+            try {
+                seedBtn.disabled = true;
+                clearBtn.disabled = true;
+                
+                showStatus('🌱 Starting database seeding...', 'loading');
+                
+                // First, create Firebase Auth accounts for users
+                const users = generateUsers();
+                showStatus('👥 Creating Firebase Auth accounts...', 'loading');
+                
+                for (const user of users) {
+                    try {
+                        // Create Firebase Auth account
+                        const userCredential = await createUserWithEmailAndPassword(auth, user.email, user.password);
+                        const firebaseUser = userCredential.user;
+                        
+                        // Update user profile
+                        await updateProfile(firebaseUser, {
+                            displayName: `${user.firstName} ${user.lastName}`
+                        });
+                        
+                        // Store user data in Firestore with Firebase UID
+                        const userDoc = {
+                            ...user,
+                            firebaseUid: firebaseUser.uid,
+                            updatedAt: serverTimestamp()
+                        };
+                        delete userDoc.password; // Don't store password in Firestore
+                        
+                        await setDoc(doc(db, 'users', firebaseUser.uid), userDoc);
+                        
+                        console.log(`✅ Created user: ${user.email}`);
+                    } catch (error) {
+                        if (error.code === 'auth/email-already-in-use') {
+                            console.log(`⚠️ User already exists: ${user.email}`);
+                        } else {
+                            console.error(`❌ Error creating user ${user.email}:`, error);
+                        }
+                    }
+                }
+                
+                const collections = [
+                    { name: 'rooms', data: generateRooms() },
+                    { name: 'bookings', data: generateBookings() },
+                    { name: 'reviews', data: generateReviews() },
+                    { name: 'payments', data: generatePayments() },
+                    { name: 'extras', data: generateExtras() },
+                    { name: 'promoCodes', data: generatePromoCodes() },
+                    { name: 'analytics', data: generateAnalytics() },
+                    { name: 'notifications', data: generateNotifications() },
+                    { name: 'settings', data: generateSettings() }
+                ];
+                
+                createCollectionsListUI(['users', ...collections.map(c => c.name)]);
+                updateCollectionStatus('users', 'success');
+                
+                let completed = 1; // Users already completed
+                const total = collections.length + 1;
+                
+                for (const { name, data } of collections) {
+                    try {
+                        updateCollectionStatus(name, 'loading');
+                        
+                        const batch = writeBatch(db);
+                        
+                        for (const item of data) {
+                            const docRef = doc(db, name, item.id);
+                            batch.set(docRef, item);
+                        }
+                        
+                        await batch.commit();
+                        
+                        updateCollectionStatus(name, 'success');
+                        completed++;
+                        updateProgress(completed, total);
+                        
+                        // Small delay to show progress
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                        
+                    } catch (error) {
+                        console.error(`Error seeding ${name}:`, error);
+                        updateCollectionStatus(name, 'error');
+                    }
+                }
+                
+                showStatus('🎉 Database seeding completed successfully!', 'success');
+                
+            } catch (error) {
+                console.error('Seeding error:', error);
+                showStatus(`❌ Error: ${error.message}`, 'error');
+            } finally {
+                seedBtn.disabled = false;
+                clearBtn.disabled = false;
+            }
+        }
+
+        // Clear database function
+        async function clearDatabase() {
+            if (!confirm('⚠️ Are you sure you want to clear ALL data? This action cannot be undone!')) {
+                return;
+            }
+            
+            try {
+                seedBtn.disabled = true;
+                clearBtn.disabled = true;
+                
+                showStatus('🗑️ Clearing database...', 'loading');
+                
+                const collections = ['users', 'rooms', 'bookings', 'reviews', 'payments', 'extras', 'promoCodes', 'analytics', 'notifications', 'settings'];
+                
+                for (const collectionName of collections) {
+                    const querySnapshot = await getDocs(collection(db, collectionName));
+                    const batch = writeBatch(db);
+                    
+                    querySnapshot.forEach((doc) => {
+                        batch.delete(doc.ref);
+                    });
+                    
+                    await batch.commit();
+                }
+                
+                showStatus('✅ Database cleared successfully!', 'success');
+                
+            } catch (error) {
+                console.error('Clear error:', error);
+                showStatus(`❌ Error: ${error.message}`, 'error');
+            } finally {
+                seedBtn.disabled = false;
+                clearBtn.disabled = false;
+            }
+        }
+        
+        // Event listeners
+        seedBtn.addEventListener('click', seedDatabase);
+        clearBtn.addEventListener('click', clearDatabase);
+
+        console.log('🌱 Firebase Seeder initialized');
+    </script>
+</body>
+</html>
