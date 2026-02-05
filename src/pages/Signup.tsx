@@ -74,7 +74,7 @@ export const Signup: React.FC = () => {
                 {...register('firstName')}
                 id="firstName"
                 type="text"
-                placeholder="John"
+                placeholder="Abebe"
                 className={`w-full px-4 py-3 rounded-xl border ${
                   errors.firstName ? 'border-red-300' : 'border-neutral-200'
                 } focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent transition-all`}
@@ -92,7 +92,7 @@ export const Signup: React.FC = () => {
                 {...register('lastName')}
                 id="lastName"
                 type="text"
-                placeholder="Doe"
+                placeholder="Kebede"
                 className={`w-full px-4 py-3 rounded-xl border ${
                   errors.lastName ? 'border-red-300' : 'border-neutral-200'
                 } focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent transition-all`}
@@ -112,7 +112,7 @@ export const Signup: React.FC = () => {
               {...register('email')}
               id="email"
               type="email"
-              placeholder="you@example.com"
+              placeholder="you@gmail.com"
               className={`w-full px-4 py-3 rounded-xl border ${
                 errors.email ? 'border-red-300' : 'border-neutral-200'
               } focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent transition-all`}
@@ -134,7 +134,7 @@ export const Signup: React.FC = () => {
               {...register('phone')}
               id="phone"
               type="tel"
-              placeholder="+1 (555) 000-0000"
+              placeholder="+251-9*******"
               className="w-full px-4 py-3 rounded-xl border border-neutral-200 focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent transition-all"
             />
           </div>

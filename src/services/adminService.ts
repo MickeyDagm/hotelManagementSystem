@@ -325,6 +325,6 @@ export class AnalyticsService {
 
 // Export all services
 export { UserManagementService as UserService };
-export { BookingManagementService };
+export { BookingManagementService as BookingService };
 export { RoomManagementService as RoomService };
-export { AnalyticsService };
+export { AnalyticsService as Analytics };
